@@ -1,0 +1,19 @@
+kubernetes/
+├── docker-compose.yml
+├── kubernetes/
+│   ├── kafka-cluster.yaml
+│   ├── producer-deployment.yaml
+│   ├── consumer-inventory-deployment.yaml
+│   └── consumer-shipping-deployment.yaml
+├── producer-cart/
+│   ├── main.go
+│   ├── topic.go
+│   └── go.mod
+├── consumer-inventory/
+│   ├── main.go
+│   ├── go.mod
+│   └── go.sum
+└── consumer-shipping/
+    ├── main.go
+    ├── go.mod
+    └── go.sum

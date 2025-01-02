@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.8
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    networks:
+      - kafkagolang-network
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: bitnami/kafka:3.3.1
+    platform: linux/amd64 # Hinzugefügt
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+    ports:
+      - "9092:9092"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    networks:
+      - kafkagolang-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  producer-cart:
+    build:
+      context: ./producer-cart
+    ports:
+      - "8081:8080" # Externer Zugriff auf den Producer-API-Port
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=ORDER_TOPIC
+      - PORT=8080
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafkagolang-network
+    restart: unless-stopped
+
+  consumer-inventory:
+    build:
+      context: ./consumer-inventory
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=ORDER_TOPIC
+      - GROUP_ID=inventoryGroup
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafkagolang-network
+    restart: unless-stopped
+
+  consumer-shipping:
+    build:
+      context: ./consumer-shipping
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=ORDER_TOPIC
+      - GROUP_ID=shippingGroup
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafkagolang-network
+    restart: unless-stopped
+
+networks:
+  kafkagolang-network:
